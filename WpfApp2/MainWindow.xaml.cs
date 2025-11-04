@@ -1,106 +1,234 @@
-﻿using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
+﻿using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows;
 
-namespace WpfApp2;
-
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
-public partial class MainWindow : Window
+namespace _2025_WpfApp3
 {
-    //Dictionary<string, int> drinks = new Dictionary<string, int>();
-    Dictionary<string, int> drinks = new Dictionary<string, int>()
-        {
-            {"紅茶大杯", 60 },
-            {"紅茶小杯", 30 },
-            {"綠茶大杯", 60 },
-            {"綠茶小杯", 30 },
-            {"可樂大杯", 40 },
-            {"可樂小杯", 20 }
-        };
-
-    Dictionary<string, int> orders = new Dictionary<string, int>();
-    string resultMessage = "";
-    string typeMessage = "";
-    public MainWindow()
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
     {
-        InitializeComponent();
-    }
+        Color strokeColor = Colors.Black;
+        Color fillColor = Colors.Transparent;
+        int strokeThickness = 1;
+        string actionType = "Draw";
+        string shapeType = "Line";
+        Point start, end;
 
-    private void OrderButton_Click(object sender, RoutedEventArgs e)
-    {
-        orders.Clear();
-        resultMessage = "";
-        for (int i = 0; i < DrinkMenu_StackPanel.Children.Count; i++)
+        public MainWindow()
         {
-            var sp = DrinkMenu_StackPanel.Children[i] as StackPanel;
-            var cb = sp.Children[0] as CheckBox;
-            var sl = sp.Children[2] as Slider;
+            InitializeComponent();
+            StrokeColorPicker.SelectedColor = strokeColor;
+            FillColorPicker.SelectedColor = fillColor;
+        }
 
-            int quantity = (int)sl.Value;
+        private void ShapeButton_Checked(object sender, RoutedEventArgs e)
+        {
+            var targetRadioButton = sender as RadioButton;
+            shapeType = targetRadioButton.Tag.ToString();
+            actionType = "Draw";
+            DisplayStatus();
+        }
 
-            if (cb.IsChecked == true && quantity > 0)
+        private void DisplayStatus()
+        {
+            if (StatusLabel != null) StatusLabel.Content = $"工作模式:{actionType} ";
+            if (ShapeLabel != null) ShapeLabel.Content = $"形狀:{shapeType}   座標：({start.X}, {start.Y}) - ({end.X}, {end.Y})  形狀總數：{MyCanvas.Children.Count}";
+            if (ColorLabel != null) ColorLabel.Content = $"筆刷色彩：{strokeColor} 填充色彩：{fillColor} 線條粗細：{strokeThickness}";
+        }
+
+        private void StrokeColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+        {
+            strokeColor = (Color)StrokeColorPicker.SelectedColor;
+            DisplayStatus();
+        }
+
+        private void FillColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+        {
+            fillColor = (Color)FillColorPicker.SelectedColor;
+            DisplayStatus();
+        }
+
+        private void ThicknessSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            strokeThickness = (int)ThicknessSlider.Value;
+            DisplayStatus();
+        }
+
+        private void EraserButton_Click(object sender, RoutedEventArgs e)
+        {
+            actionType = "Eraser";
+            DisplayStatus();
+        }
+
+        private void MyCanvas_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            MyCanvas.Cursor = Cursors.Pen;
+        }
+
+        private void MyCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            start = e.GetPosition(MyCanvas);
+            MyCanvas.Cursor = Cursors.Cross;
+            if (actionType == "Draw")
             {
-                string drinkName = cb.Content.ToString();
-                int price = drinks[drinkName];
-                orders.Add(drinkName, quantity);
+                switch (shapeType)
+                {
+                    case "Line":
+                        Line line = new Line
+                        {
+                            X1 = start.X,
+                            Y1 = start.Y,
+                            X2 = end.X,
+                            Y2 = end.Y,
+                            Stroke = Brushes.Gray,
+                            StrokeThickness = 1
+                        };
+                        MyCanvas.Children.Add(line);
+                        break;
+
+                    case "Rectangle":
+                        Rectangle rect = new Rectangle
+                        {
+                            Stroke = Brushes.Gray,
+                            Fill = Brushes.LightGray
+                        };
+                        MyCanvas.Children.Add(rect);
+                        rect.SetValue(Canvas.LeftProperty, start.X);
+                        rect.SetValue(Canvas.TopProperty, start.Y);
+                        break;
+
+                    case "Ellipse":
+                        Ellipse ellipse = new Ellipse
+                        {
+                            Stroke = Brushes.Gray,
+                            Fill = Brushes.LightGray
+                        };
+                        MyCanvas.Children.Add(ellipse);
+                        ellipse.SetValue(Canvas.LeftProperty, start.X);
+                        ellipse.SetValue(Canvas.TopProperty, start.Y);
+                        break;
+
+                    case "Polyline":
+                        Polyline polyliine = new Polyline
+                        {
+                            Stroke = Brushes.Gray,
+                            StrokeThickness = 1
+                        };
+                        MyCanvas.Children.Add(polyliine);
+                        break;
+                }
+            }
+            DisplayStatus();
+        }
+
+        private void MyCanvas_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (actionType == "Draw")
+            {
+                Brush strokeBrush = new SolidColorBrush(strokeColor);
+                Brush fillBrush = new SolidColorBrush(fillColor);
+
+                switch (shapeType)
+                {
+                    case "Line":
+                        var line = MyCanvas.Children.OfType<Line>().LastOrDefault();
+                        line.Stroke = strokeBrush;
+                        line.StrokeThickness = strokeThickness;
+                        break;
+
+                    case "Rectangle":
+                        var rect = MyCanvas.Children.OfType<Rectangle>().LastOrDefault();
+                        rect.Stroke = strokeBrush;
+                        rect.Fill = fillBrush;
+                        rect.StrokeThickness = strokeThickness;
+                        break;
+
+                    case "Ellipse":
+                        var ellipse = MyCanvas.Children.OfType<Ellipse>().LastOrDefault();
+                        ellipse.Stroke = strokeBrush;
+                        ellipse.Fill = fillBrush;
+                        ellipse.StrokeThickness = strokeThickness;
+                        break;
+
+                    case "Polyline":
+                        var polyline = MyCanvas.Children.OfType<Polyline>().LastOrDefault();
+                        polyline.Stroke = strokeBrush;
+                        polyline.Fill = fillBrush;
+                        polyline.StrokeThickness = strokeThickness;
+                        break;
+                }
             }
         }
 
-        double total = 0.0;
-        double sellPrice = 0.0;
-        int index = 1;
-        string discountMessage = "沒有折扣";
-
-        resultMessage += $"購買方式：{typeMessage}，訂購清單如下:\n";
-        foreach (var item in orders)
+        private void MyCanvas_MouseMove(object sender, MouseEventArgs e)
         {
-            string drinkName = item.Key;
-            int quantity = item.Value;
-            int price = drinks[drinkName];
+            end = e.GetPosition(MyCanvas);
 
-            int subTotal = price * quantity;
-            total += subTotal;
-            resultMessage += $"{index}. {drinkName} ： {price}元 x {quantity}杯 = {subTotal}元\n";
-            index++;
-        }
-        resultMessage += $"總計: {total}元\n";
+            switch (actionType)
+            {
+                case "Draw":
+                    if (e.LeftButton == MouseButtonState.Pressed)
+                    {
+                        Point origin;
+                        origin.X = Math.Min(start.X, end.X);
+                        origin.Y = Math.Min(start.Y, end.Y);
+                        double width = Math.Abs(end.X - start.X);
+                        double height = Math.Abs(end.Y - start.Y);
 
-        if (total >= 500)
-        {
-            discountMessage = "滿500元打8折";
-            sellPrice = total * 0.8;
-        }
-        else if (total >= 300)
-        {
-            discountMessage = "滿300元打85折";
-            sellPrice = total * 0.85;
-        }
-        else if (total >= 200)
-        {
-            discountMessage = "滿200元打9折";
-            sellPrice = total * 0.9;
-        }
-        else
-        {
-            sellPrice = total;
-        }
-        resultMessage += $"折扣訊息：{discountMessage}，實付金額： {sellPrice}元。";
+                        switch (shapeType)
+                        {
+                            case "Line":
+                                var line = MyCanvas.Children.OfType<Line>().LastOrDefault();
+                                line.X2 = end.X;
+                                line.Y2 = end.Y;
+                                break;
 
-        Result_TextBlock.Text = resultMessage;
-    }
+                            case "Rectangle":
+                                var rect = MyCanvas.Children.OfType<Rectangle>().LastOrDefault();
+                                rect.Width = width;
+                                rect.Height = height;
+                                rect.SetValue(Canvas.LeftProperty, origin.X);
+                                rect.SetValue(Canvas.TopProperty, origin.Y);
+                                break;
 
-    private void RadioButton_Checked(object sender, RoutedEventArgs e)
-    {
-        var rb = sender as RadioButton;
-        typeMessage = rb.Content.ToString();
+                            case "Ellipse":
+                                var ellipse = MyCanvas.Children.OfType<Ellipse>().LastOrDefault();
+                                ellipse.Width = width;
+                                ellipse.Height = height;
+                                ellipse.SetValue(Canvas.LeftProperty, origin.X);
+                                ellipse.SetValue(Canvas.TopProperty, origin.Y);
+                                break;
+
+                            case "Polyline":
+                                var polyline = MyCanvas.Children.OfType<Polyline>().LastOrDefault();
+                                polyline.Points.Add(end);
+                                break;
+                        }
+                    }
+                    break;
+                case "Eraser":
+                    MyCanvas.Cursor = Cursors.Hand;
+                    var shape = e.OriginalSource as Shape;
+                    MyCanvas.Children.Remove(shape);
+                    if (MyCanvas.Children.Count == 0)
+                    {
+                        MyCanvas.Cursor = Cursors.Arrow;
+                        actionType = "Draw";
+                    }
+                    break;
+            }
+            DisplayStatus();
+        }
+
+        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        {
+            MyCanvas.Children.Clear();
+            actionType = "Draw";
+            DisplayStatus();
+        }
     }
 }
