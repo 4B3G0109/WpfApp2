@@ -1,8 +1,13 @@
-﻿using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Shapes;
+﻿using Microsoft.Win32;
+using System.IO;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Markup;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+
 
 namespace _2025_WpfApp3
 {
@@ -11,18 +16,51 @@ namespace _2025_WpfApp3
     /// </summary>
     public partial class MainWindow : Window
     {
+        Point start = new Point { X = 0, Y = 0 };
+        Point end = new Point { X = 0, Y = 0 };
         Color strokeColor = Colors.Black;
         Color fillColor = Colors.Transparent;
         int strokeThickness = 1;
-        string actionType = "Draw";
         string shapeType = "Line";
-        Point start, end;
-
+        string actionType = "Draw";
         public MainWindow()
         {
             InitializeComponent();
-            StrokeColorPicker.SelectedColor = strokeColor;
-            FillColorPicker.SelectedColor = fillColor;
+            strokeColorPicker.SelectedColor = strokeColor;
+            fillColorPicker.SelectedColor = fillColor;
+        }
+
+        private void strokeColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+        {
+            strokeColor = strokeColorPicker.SelectedColor.Value;
+            DisplayStatus();
+        }
+
+        private void fillColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+        {
+            fillColor = fillColorPicker.SelectedColor.Value;
+            DisplayStatus();
+        }
+
+        private void DisplayStatus()
+        {
+            if (statusLabel != null)
+            {
+                if (actionType == "Draw")
+                {
+                    statusLabel.Content = $"圖形：{shapeType}   座標：({start.X},{start.Y}) - ({end.X},{end.Y})";
+                }
+                else
+                {
+                    statusLabel.Content = $"工作模式：{actionType}";
+                }
+            }
+            if (colorLabel != null) colorLabel.Content = $"筆刷色彩: {strokeColor} 填滿色彩: {fillColor} 筆刷粗細: {strokeThickness}";
+            if (shapeLabel != null)
+            {
+                int shapeCount = MyCanvas.Children.Count;
+                shapeLabel.Content = $"目前形狀: {shapeType}，總共有{shapeCount}個形狀";
+            }
         }
 
         private void ShapeButton_Checked(object sender, RoutedEventArgs e)
@@ -33,29 +71,18 @@ namespace _2025_WpfApp3
             DisplayStatus();
         }
 
-        private void DisplayStatus()
+        private void strokeThicknessSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (StatusLabel != null) StatusLabel.Content = $"工作模式:{actionType} ";
-            if (ShapeLabel != null) ShapeLabel.Content = $"形狀:{shapeType}   座標：({start.X}, {start.Y}) - ({end.X}, {end.Y})  形狀總數：{MyCanvas.Children.Count}";
-            if (ColorLabel != null) ColorLabel.Content = $"筆刷色彩：{strokeColor} 填充色彩：{fillColor} 線條粗細：{strokeThickness}";
-        }
-
-        private void StrokeColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
-        {
-            strokeColor = (Color)StrokeColorPicker.SelectedColor;
+            strokeThickness = (int)strokeThicknessSlider.Value;
             DisplayStatus();
         }
 
-        private void FillColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+        private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
-            fillColor = (Color)FillColorPicker.SelectedColor;
+            actionType = "Clear";
+            MyCanvas.Children.Clear();
             DisplayStatus();
-        }
-
-        private void ThicknessSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            strokeThickness = (int)ThicknessSlider.Value;
-            DisplayStatus();
+            actionType = "Draw";
         }
 
         private void EraserButton_Click(object sender, RoutedEventArgs e)
@@ -71,8 +98,9 @@ namespace _2025_WpfApp3
 
         private void MyCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            start = e.GetPosition(MyCanvas);
             MyCanvas.Cursor = Cursors.Cross;
+            start = e.GetPosition(MyCanvas);
+
             if (actionType == "Draw")
             {
                 switch (shapeType)
@@ -113,64 +141,27 @@ namespace _2025_WpfApp3
                         break;
 
                     case "Polyline":
-                        Polyline polyliine = new Polyline
+                        var polyline = new Polyline
                         {
                             Stroke = Brushes.Gray,
-                            StrokeThickness = 1
+                            Fill = Brushes.LightGray,
                         };
-                        MyCanvas.Children.Add(polyliine);
+                        MyCanvas.Children.Add(polyline);
                         break;
                 }
             }
+
             DisplayStatus();
-        }
-
-        private void MyCanvas_MouseUp(object sender, MouseButtonEventArgs e)
-        {
-            if (actionType == "Draw")
-            {
-                Brush strokeBrush = new SolidColorBrush(strokeColor);
-                Brush fillBrush = new SolidColorBrush(fillColor);
-
-                switch (shapeType)
-                {
-                    case "Line":
-                        var line = MyCanvas.Children.OfType<Line>().LastOrDefault();
-                        line.Stroke = strokeBrush;
-                        line.StrokeThickness = strokeThickness;
-                        break;
-
-                    case "Rectangle":
-                        var rect = MyCanvas.Children.OfType<Rectangle>().LastOrDefault();
-                        rect.Stroke = strokeBrush;
-                        rect.Fill = fillBrush;
-                        rect.StrokeThickness = strokeThickness;
-                        break;
-
-                    case "Ellipse":
-                        var ellipse = MyCanvas.Children.OfType<Ellipse>().LastOrDefault();
-                        ellipse.Stroke = strokeBrush;
-                        ellipse.Fill = fillBrush;
-                        ellipse.StrokeThickness = strokeThickness;
-                        break;
-
-                    case "Polyline":
-                        var polyline = MyCanvas.Children.OfType<Polyline>().LastOrDefault();
-                        polyline.Stroke = strokeBrush;
-                        polyline.Fill = fillBrush;
-                        polyline.StrokeThickness = strokeThickness;
-                        break;
-                }
-            }
         }
 
         private void MyCanvas_MouseMove(object sender, MouseEventArgs e)
         {
             end = e.GetPosition(MyCanvas);
+            DisplayStatus();
 
             switch (actionType)
             {
-                case "Draw":
+                case "Draw": //繪圖模式
                     if (e.LeftButton == MouseButtonState.Pressed)
                     {
                         Point origin;
@@ -210,25 +201,130 @@ namespace _2025_WpfApp3
                         }
                     }
                     break;
-                case "Eraser":
+
+                case "Eraser": //橡皮擦模式
                     MyCanvas.Cursor = Cursors.Hand;
                     var shape = e.OriginalSource as Shape;
                     MyCanvas.Children.Remove(shape);
-                    if (MyCanvas.Children.Count == 0)
-                    {
-                        MyCanvas.Cursor = Cursors.Arrow;
-                        actionType = "Draw";
-                    }
+                    if (MyCanvas.Children.Count == 0) MyCanvas.Cursor = Cursors.Arrow;
                     break;
             }
             DisplayStatus();
         }
 
-        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        private void MyCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            MyCanvas.Children.Clear();
-            actionType = "Draw";
-            DisplayStatus();
+            Brush strokeBrush = new SolidColorBrush(strokeColor);
+            Brush fillBrush = new SolidColorBrush(fillColor);
+
+            switch (shapeType)
+            {
+                case "Line":
+                    var line = MyCanvas.Children.OfType<Line>().LastOrDefault();
+                    line.Stroke = strokeBrush;
+                    line.StrokeThickness = strokeThickness;
+                    break;
+
+                case "Rectangle":
+                    var rect = MyCanvas.Children.OfType<Rectangle>().LastOrDefault();
+                    rect.Stroke = strokeBrush;
+                    rect.Fill = fillBrush;
+                    rect.StrokeThickness = strokeThickness;
+                    break;
+
+                case "Ellipse":
+                    var ellipse = MyCanvas.Children.OfType<Ellipse>().LastOrDefault();
+                    ellipse.Stroke = strokeBrush;
+                    ellipse.Fill = fillBrush;
+                    ellipse.StrokeThickness = strokeThickness;
+                    break;
+
+                case "Polyline":
+                    var polyline = MyCanvas.Children.OfType<Polyline>().LastOrDefault();
+                    polyline.Stroke = strokeBrush;
+                    polyline.Fill = fillBrush;
+                    polyline.StrokeThickness = strokeThickness;
+                    break;
+            }
+        }
+
+        private void SaveCanvas_Click(object sender, RoutedEventArgs e)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Title = "儲存畫布內容",
+                Filter = "PNG圖片 (*.png)|*.png|JPEG圖片 (*.jpg)|*.jpg|原始Canvas物件檔案(*.xml)|*.xml|所有檔案(*.*)|*.*",
+                DefaultExt = "png"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                int w = Convert.ToInt32(MyCanvas.ActualWidth);
+                int h = Convert.ToInt32(MyCanvas.ActualHeight);
+
+                RenderTargetBitmap renderBitmap = new RenderTargetBitmap(w, h, 96d, 96d, PixelFormats.Pbgra32);
+                renderBitmap.Render(MyCanvas);
+
+                string extension = System.IO.Path.GetExtension(saveFileDialog.FileName).ToLower();
+
+                switch (extension)
+                {
+                    case ".png":
+                        var pngEncoder = new PngBitmapEncoder();
+                        pngEncoder.Frames.Add(BitmapFrame.Create(renderBitmap));
+                        using (FileStream outStream = new FileStream(saveFileDialog.FileName, FileMode.Create))
+                        {
+                            pngEncoder.Save(outStream);
+                        }
+                        MessageBox.Show("存檔成功");
+                        break;
+                    case ".jpg":
+                        var jpgEncoder = new JpegBitmapEncoder();
+                        jpgEncoder.Frames.Add(BitmapFrame.Create(renderBitmap));
+                        using (FileStream outStream = new FileStream(saveFileDialog.FileName, FileMode.Create))
+                        {
+                            jpgEncoder.Save(outStream);
+                        }
+                        MessageBox.Show("存檔成功");
+                        break;
+
+                    case ".xml":
+                        //將 Canvas 物件序列化為 XAML 字串
+                        string canvasXaml = XamlWriter.Save(MyCanvas);
+
+                        // 3. 將 XAML 字串寫入檔案
+                        File.WriteAllText(saveFileDialog.FileName, canvasXaml);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        private void OpenCanvas_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog
+            {
+                Title = "開啟畫布內容",
+                Filter = "原始Canvas物件檔案(*.xml)|*.xml|所有檔案(*.*)|*.*",
+                DefaultExt = "xml"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                string filePath = openFileDialog.FileName;
+                string canvasXaml = File.ReadAllText(filePath);
+
+                Canvas tempCanvas = XamlReader.Parse(canvasXaml) as Canvas;
+
+                var tempCanvasChildren = tempCanvas.Children.Cast<Shape>().ToList();
+                foreach (var child in tempCanvasChildren)
+                {
+                    tempCanvas.Children.Remove(child);
+                    MyCanvas.Children.Add(child);
+                }
+                //MessageBox.Show("開啟檔案成功");
+            }
         }
     }
 }
